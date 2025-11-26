@@ -83,8 +83,10 @@ public class PointOptimisticSteps {
     public void verifyBusyFailure() {
         assertThat(executionResult)
             .isNotNull();
-        assertThat(executionResult.asyncError())
-            .isNotNull()
-            .isInstanceOf(PointConcurrencyBusyException.class);
+        assertThat(executionResult.asyncErrors())
+            .isNotEmpty()
+            .anySatisfy(error ->
+                assertThat(error).isInstanceOf(PointConcurrencyBusyException.class)
+            );
     }
 }
