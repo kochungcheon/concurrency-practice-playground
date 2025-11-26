@@ -25,7 +25,9 @@ public final class ConcurrentTestExecutor {
      * @see #runWithThreads(int, int, Runnable, long, TimeUnit)
      */
     public static Result run(int userCount, Runnable task) {
-        return runWithThreads(DEFAULT_THREAD_COUNT, userCount, task);
+        // 사용자가 스레드 수를 지정하지 않았다면, userCount만큼은 확보해준다.
+        int threadPoolSize = Math.max(userCount, DEFAULT_THREAD_COUNT);
+        return runWithThreads(threadPoolSize, userCount, task);
     }
 
     /**
