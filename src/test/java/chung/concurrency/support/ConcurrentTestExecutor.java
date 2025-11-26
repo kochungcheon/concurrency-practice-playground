@@ -9,6 +9,7 @@ import java.util.concurrent.atomic.AtomicReference;
 public final class ConcurrentTestExecutor {
 
     private static final int DEFAULT_THREAD_COUNT = 16;
+    private static final int DEFAULT_TIMEOUT_SECONDS = 5;
 
     private ConcurrentTestExecutor() {
     }
@@ -39,11 +40,11 @@ public final class ConcurrentTestExecutor {
                 });
             }
 
-            if (!ready.await(5, TimeUnit.SECONDS)) {
+            if (!ready.await(DEFAULT_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
                 throw new IllegalStateException("threads did not get ready in time");
             }
             start.countDown();
-            if (!done.await(10, TimeUnit.SECONDS)) {
+            if (!done.await(DEFAULT_TIMEOUT_SECONDS * 2, TimeUnit.SECONDS)) {
                 throw new IllegalStateException("threads did not finish in time");
             }
             return new Result(asyncError.get());
