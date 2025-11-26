@@ -44,8 +44,9 @@ public final class ConcurrentTestExecutor {
                         start.await();
                         task.run();
                     } catch (InterruptedException e) {
-                        // 인터럽트 발생 시 스레드 상태 복구
+                        // 인터럽트 발생 시 스레드 상태 복구하고 에러로 기록
                         Thread.currentThread().interrupt();
+                        asyncErrors.add(e);
                     } catch (Throwable throwable) {
                         asyncErrors.add(throwable);
                     } finally {
