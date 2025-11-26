@@ -29,17 +29,21 @@ public final class ConcurrentTestExecutor {
 
         ExecutorService executorService = Executors.newFixedThreadPool(threadPoolSize);
         AtomicReference<Throwable> asyncError = new AtomicReference<>();
-        try {
-            CountDownLatch ready = new CountDownLatch(userCount);
-            CountDownLatch start = new CountDownLatch(1);
-            CountDownLatch done = new CountDownLatch(userCount);
 
+        CountDownLatch ready = new CountDownLatch(userCount);
+        CountDownLatch start = new CountDownLatch(1);
+        CountDownLatch done = new CountDownLatch(userCount);
+
+        try {
             for (int i = 0; i < userCount; i++) {
                 executorService.submit(() -> {
                     try {
                         ready.countDown();
                         start.await();
                         task.run();
+                    } catch (InterruptedException e) {
+                        // 인터럽트 발생 시 스레드 상태 복구
+                        Thread.currentThread().interrupt();
                     } catch (Throwable throwable) {
                         asyncError.compareAndSet(null, throwable);
                     } finally {
@@ -48,18 +52,38 @@ public final class ConcurrentTestExecutor {
                 });
             }
 
+            // 1. 모든 스레드 준비 대기
             if (!ready.await(DEFAULT_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
-                throw new IllegalStateException("threads did not get ready in time");
+                throw new IllegalStateException("Timeout waiting for threads to get ready");
             }
+
+            // 2. 동시 시작
             start.countDown();
-            if (!done.await(DEFAULT_TIMEOUT_SECONDS * 2, TimeUnit.SECONDS)) {
-                throw new IllegalStateException("threads did not finish in time");
+
+            // 3. 모든 작업 완료 대기
+            if (!done.await(DEFAULT_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
+                throw new IllegalStateException("Timeout waiting for threads to finish");
             }
+
             return new Result(asyncError.get());
+
         } catch (InterruptedException e) {
-			throw new RuntimeException(e);
-		} finally {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("Test interrupted", e);
+        } finally {
+            shutdownExecutor(executorService);
+        }
+    }
+
+    private static void shutdownExecutor(ExecutorService executorService) {
+        executorService.shutdown();
+        try {
+            if (!executorService.awaitTermination(5, TimeUnit.SECONDS)) {
+                executorService.shutdownNow();
+            }
+        } catch (InterruptedException e) {
             executorService.shutdownNow();
+            Thread.currentThread().interrupt();
         }
     }
 
