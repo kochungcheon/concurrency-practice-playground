@@ -1,7 +1,8 @@
 package chung.concurrency.support;
 
-import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.Collection;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -29,7 +30,7 @@ public final class ConcurrentTestExecutor {
         }
 
         ExecutorService executorService = Executors.newFixedThreadPool(threadPoolSize);
-        List<Throwable> asyncErrors = new CopyOnWriteArrayList<>();
+        Queue<Throwable> asyncErrors = new ConcurrentLinkedQueue<>();
 
         CountDownLatch ready = new CountDownLatch(userCount);
         CountDownLatch start = new CountDownLatch(1);
@@ -88,7 +89,7 @@ public final class ConcurrentTestExecutor {
         }
     }
 
-    public record Result(List<Throwable> asyncErrors) {
+    public record Result(Collection<Throwable> asyncErrors) {
 
         public void assertNoAsyncError() {
             if (!asyncErrors.isEmpty()) {
