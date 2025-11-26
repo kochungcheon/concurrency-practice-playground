@@ -19,6 +19,14 @@ public final class ConcurrentTestExecutor {
     }
 
     public static Result runWithThreads(int threadPoolSize, int userCount, Runnable task) {
+
+        if (threadPoolSize < userCount) {
+            throw new IllegalArgumentException(
+                String.format("ThreadPoolSize(%d) must be >= UserCount(%d) to prevent deadlock.",
+                    threadPoolSize, userCount)
+            );
+        }
+
         ExecutorService executorService = Executors.newFixedThreadPool(threadPoolSize);
         AtomicReference<Throwable> asyncError = new AtomicReference<>();
         try {
