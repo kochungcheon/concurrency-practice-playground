@@ -8,6 +8,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * 동시성 테스트를 손쉽게 실행하고 결과를 검증할 수 있도록 돕는 유틸리티 클래스입니다.
+ */
 public final class ConcurrentTestExecutor {
 
     private static final int DEFAULT_THREAD_COUNT = 16;
@@ -16,14 +19,38 @@ public final class ConcurrentTestExecutor {
     private ConcurrentTestExecutor() {
     }
 
+    /**
+     * 기본 스레드 수(16)와 타임아웃(5초)으로 동시성 테스트를 실행합니다.
+     *
+     * @see #runWithThreads(int, int, Runnable, long, TimeUnit)
+     */
     public static Result run(int userCount, Runnable task) {
         return runWithThreads(DEFAULT_THREAD_COUNT, userCount, task);
     }
 
+    /**
+     * 기본 타임아웃(5초)으로 동시성 테스트를 실행합니다.
+     *
+     * @see #runWithThreads(int, int, Runnable, long, TimeUnit)
+     */
     public static Result runWithThreads(int threadPoolSize, int userCount, Runnable task) {
         return runWithThreads(threadPoolSize, userCount, task, DEFAULT_TIMEOUT_SECONDS, TimeUnit.SECONDS);
     }
 
+    /**
+     * 지정된 수의 사용자가 특정 작업을 동시에 실행하는 테스트를 수행합니다.
+     * <p>
+     * 이 메서드는 모든 스레드가 준비될 때까지 기다린 후, 동시에 시작하여 경합 조건을 시뮬레이션합니다.
+     *
+     * @param threadPoolSize 동시성 테스트에 사용할 스레드 풀의 크기
+     * @param userCount      작업을 실행할 사용자의 수 (스레드 수)
+     * @param task           각 사용자가 실행할 작업
+     * @param timeout        스레드 준비 및 전체 작업 완료를 기다릴 최대 시간
+     * @param unit           타임아웃 시간 단위
+     * @return 테스트 실행 결과를 담은 {@link Result} 객체.
+     * <b>경고: 반환된 Result 객체는 반드시 {@link Result#assertNoAsyncError()} 등을 통해 검증해야 합니다.
+     * 그렇지 않으면 비동기 스레드에서 발생한 예외가 무시될 수 있습니다.</b>
+     */
     public static Result runWithThreads(
         int threadPoolSize,
         int userCount,
@@ -99,8 +126,18 @@ public final class ConcurrentTestExecutor {
         }
     }
 
+    /**
+     * 동시성 테스트의 실행 결과를 나타냅니다.
+     * 비동기 스레드에서 발생한 예외 목록을 포함합니다.
+     *
+     * @param asyncErrors 비동기 스레드에서 발생한 예외 목록
+     */
     public record Result(Collection<Throwable> asyncErrors) {
 
+        /**
+         * 비동기 스레드에서 예외가 발생하지 않았는지 검증합니다.
+         * 예외가 하나라도 발생했다면, 모든 예외를 포함하는 {@link AssertionError}를 던집니다.
+         */
         public void assertNoAsyncError() {
             if (!asyncErrors.isEmpty()) {
                 AssertionError error = new AssertionError(
