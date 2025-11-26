@@ -1,10 +1,11 @@
 package chung.concurrency.support;
 
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 
 public final class ConcurrentTestExecutor {
 
@@ -28,7 +29,7 @@ public final class ConcurrentTestExecutor {
         }
 
         ExecutorService executorService = Executors.newFixedThreadPool(threadPoolSize);
-        AtomicReference<Throwable> asyncError = new AtomicReference<>();
+        List<Throwable> asyncErrors = new CopyOnWriteArrayList<>();
 
         CountDownLatch ready = new CountDownLatch(userCount);
         CountDownLatch start = new CountDownLatch(1);
@@ -45,7 +46,7 @@ public final class ConcurrentTestExecutor {
                         // 인터럽트 발생 시 스레드 상태 복구
                         Thread.currentThread().interrupt();
                     } catch (Throwable throwable) {
-                        asyncError.compareAndSet(null, throwable);
+                        asyncErrors.add(throwable);
                     } finally {
                         done.countDown();
                     }
@@ -65,7 +66,7 @@ public final class ConcurrentTestExecutor {
                 throw new IllegalStateException("Timeout waiting for threads to finish");
             }
 
-            return new Result(asyncError.get());
+            return new Result(asyncErrors);
 
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -87,11 +88,15 @@ public final class ConcurrentTestExecutor {
         }
     }
 
-    public record Result(Throwable asyncError) {
+    public record Result(List<Throwable> asyncErrors) {
 
         public void assertNoAsyncError() {
-            if (asyncError != null) {
-                throw new AssertionError("asynchronous error occurred", asyncError);
+            if (!asyncErrors.isEmpty()) {
+                AssertionError error = new AssertionError(
+                    "asynchronous error(s) occurred: " + asyncErrors.size()
+                );
+                asyncErrors.forEach(error::addSuppressed);
+                throw error;
             }
         }
     }
