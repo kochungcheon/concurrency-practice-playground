@@ -21,7 +21,16 @@ public final class ConcurrentTestExecutor {
     }
 
     public static Result runWithThreads(int threadPoolSize, int userCount, Runnable task) {
+        return runWithThreads(threadPoolSize, userCount, task, DEFAULT_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+    }
 
+    public static Result runWithThreads(
+        int threadPoolSize,
+        int userCount,
+        Runnable task,
+        long timeout,
+        TimeUnit unit
+    ) {
         if (threadPoolSize < userCount) {
             throw new IllegalArgumentException(
                 String.format("ThreadPoolSize(%d) must be >= UserCount(%d) to prevent deadlock.",
@@ -56,7 +65,7 @@ public final class ConcurrentTestExecutor {
             }
 
             // 1. 모든 스레드 준비 대기
-            if (!ready.await(DEFAULT_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
+            if (!ready.await(timeout, unit)) {
                 throw new IllegalStateException("Timeout waiting for threads to get ready");
             }
 
@@ -64,7 +73,7 @@ public final class ConcurrentTestExecutor {
             start.countDown();
 
             // 3. 모든 작업 완료 대기
-            if (!done.await(DEFAULT_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
+            if (!done.await(timeout, unit)) {
                 throw new IllegalStateException("Timeout waiting for threads to finish");
             }
 

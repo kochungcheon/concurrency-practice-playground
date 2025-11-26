@@ -4,6 +4,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -100,7 +101,7 @@ class ConcurrentTestExecutorTest {
         int userCount = 1;
         Runnable task = () -> {
             try {
-                // Simulate a long-running task that exceeds the timeout
+                // 기본 타임아웃(5초)을 초과하도록 긴 시간 대기
                 Thread.sleep(6_000);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
@@ -109,6 +110,26 @@ class ConcurrentTestExecutorTest {
 
         // when & then
         assertThatThrownBy(() -> ConcurrentTestExecutor.run(userCount, task))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("Timeout waiting for threads to finish");
+    }
+
+    @Test
+    @DisplayName("지정된 타임아웃이 만료되면 IllegalStateException을 던진다")
+    void throwsExceptionWhenCustomTimeoutExpires() {
+        // given
+        int userCount = 1;
+        Runnable task = () -> {
+            try {
+                Thread.sleep(200); // 200ms 대기
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        };
+
+        // when & then
+        // 태스크의 대기 시간(200ms)보다 짧은 100ms를 타임아웃으로 설정
+        assertThatThrownBy(() -> ConcurrentTestExecutor.runWithThreads(1, userCount, task, 100, TimeUnit.MILLISECONDS))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessage("Timeout waiting for threads to finish");
     }
